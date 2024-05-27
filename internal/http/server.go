@@ -5,6 +5,9 @@ import (
 	"net/http"
 
 	http_helper "github.com/danzBraham/beli-mang/internal/helpers/http"
+	"github.com/danzBraham/beli-mang/internal/http/controllers"
+	"github.com/danzBraham/beli-mang/internal/repositories"
+	"github.com/danzBraham/beli-mang/internal/services"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -31,6 +34,13 @@ func (s *APIServer) Launch() error {
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Welcome to Beli Mang API"))
 	})
+
+	// User domain
+	userRepository := repositories.NewUserRepository(s.DB)
+	userService := services.NewUserService(userRepository)
+	userController := controllers.NewUserController(userService)
+
+	r.Mount("/admin", userController.Routes())
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		http_helper.ResponseError(w, http.StatusNotFound, "Not found error", "Route does not exists")
