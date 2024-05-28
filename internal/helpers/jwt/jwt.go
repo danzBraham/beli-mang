@@ -12,8 +12,8 @@ import (
 var key = []byte(os.Getenv("JWT_SECRET"))
 
 type CustomClaims struct {
-	UserId  string
-	IsAdmin bool
+	UserId  string `json:"userId"`
+	IsAdmin bool   `json:"isAdmin"`
 	jwt.RegisteredClaims
 }
 
