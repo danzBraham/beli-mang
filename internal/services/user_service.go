@@ -13,7 +13,8 @@ import (
 )
 
 type UserService interface {
-	RegisterAdminUser(ctx context.Context, payload *user_entity.RegisterAdminUserRequest) (*user_entity.RegisterAdminUserResponse, error)
+	RegisterAdminUser(ctx context.Context, payload *user_entity.RegisterUserRequest) (*user_entity.RegisterUserResponse, error)
+	RegisterUser(ctx context.Context, payload *user_entity.RegisterUserRequest) (*user_entity.RegisterUserResponse, error)
 	LoginUser(ctx context.Context, payload *user_entity.LoginUserRequest) (*user_entity.LoginUserResponse, error)
 }
 
@@ -25,7 +26,7 @@ func NewUserService(repository repositories.UserRepository) UserService {
 	return &UserServiceImpl{Repository: repository}
 }
 
-func (s *UserServiceImpl) RegisterAdminUser(ctx context.Context, payload *user_entity.RegisterAdminUserRequest) (*user_entity.RegisterAdminUserResponse, error) {
+func (s *UserServiceImpl) RegisterAdminUser(ctx context.Context, payload *user_entity.RegisterUserRequest) (*user_entity.RegisterUserResponse, error) {
 	isUsernameExists, err := s.Repository.VerifyUsername(ctx, payload.Username)
 	if err != nil {
 		return nil, err
@@ -55,7 +56,7 @@ func (s *UserServiceImpl) RegisterAdminUser(ctx context.Context, payload *user_e
 		IsAdmin:  true,
 	}
 
-	err = s.Repository.CreateAdminUser(ctx, user)
+	err = s.Repository.CreateUser(ctx, user)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +66,52 @@ func (s *UserServiceImpl) RegisterAdminUser(ctx context.Context, payload *user_e
 		return nil, err
 	}
 
-	return &user_entity.RegisterAdminUserResponse{
+	return &user_entity.RegisterUserResponse{
+		Token: token,
+	}, nil
+}
+
+func (s *UserServiceImpl) RegisterUser(ctx context.Context, payload *user_entity.RegisterUserRequest) (*user_entity.RegisterUserResponse, error) {
+	isUsernameExists, err := s.Repository.VerifyUsername(ctx, payload.Username)
+	if err != nil {
+		return nil, err
+	}
+	if isUsernameExists {
+		return nil, user_exception.ErrUsernameAlreadyExists
+	}
+
+	isUserEmailExists, err := s.Repository.VerifyUserEmail(ctx, payload.Email)
+	if err != nil {
+		return nil, err
+	}
+	if isUserEmailExists {
+		return nil, user_exception.ErrUserEmailAlreadyExists
+	}
+
+	hashedPassword, err := bcrypt_helper.HashPassword(payload.Password)
+	if err != nil {
+		return nil, err
+	}
+
+	user := &user_entity.User{
+		Id:       ulid.Make().String(),
+		Username: payload.Username,
+		Password: hashedPassword,
+		Email:    payload.Email,
+		IsAdmin:  false,
+	}
+
+	err = s.Repository.CreateUser(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	token, err := jwt_helper.GenerateToken(2*time.Hour, user.Id, user.IsAdmin)
+	if err != nil {
+		return nil, err
+	}
+
+	return &user_entity.RegisterUserResponse{
 		Token: token,
 	}, nil
 }

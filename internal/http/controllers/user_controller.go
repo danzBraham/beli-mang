@@ -23,14 +23,21 @@ func NewUserController(service services.UserService) *UserController {
 func (c *UserController) Routes() chi.Router {
 	r := chi.NewRouter()
 
-	r.Post("/register", c.handleRegisterAdminUser)
-	r.Post("/login", c.handleLoginUser)
+	r.Route("/admin", func(r chi.Router) {
+		r.Post("/register", c.handleRegisterAdminUser)
+		r.Post("/login", c.handleLoginUser)
+	})
+
+	r.Route("/users", func(r chi.Router) {
+		r.Post("/register", c.handleRegisterUser)
+		r.Post("/login", c.handleLoginUser)
+	})
 
 	return r
 }
 
 func (c *UserController) handleRegisterAdminUser(w http.ResponseWriter, r *http.Request) {
-	payload := &user_entity.RegisterAdminUserRequest{}
+	payload := &user_entity.RegisterUserRequest{}
 
 	err := http_helper.DecodeJSON(r, payload)
 	if err != nil {
@@ -50,6 +57,38 @@ func (c *UserController) handleRegisterAdminUser(w http.ResponseWriter, r *http.
 		return
 	}
 	if errors.Is(err, user_exception.ErrAdminEmailAlreadyExists) {
+		http_helper.ResponseError(w, http.StatusConflict, "Conflict error", err.Error())
+		return
+	}
+	if err != nil {
+		http_helper.ResponseError(w, http.StatusInternalServerError, "Internal server error", err.Error())
+		return
+	}
+
+	http_helper.EncodeJSON(w, http.StatusCreated, userRepsonse)
+}
+
+func (c *UserController) handleRegisterUser(w http.ResponseWriter, r *http.Request) {
+	payload := &user_entity.RegisterUserRequest{}
+
+	err := http_helper.DecodeJSON(r, payload)
+	if err != nil {
+		http_helper.ResponseError(w, http.StatusBadRequest, err.Error(), "Failed to decode JSON")
+		return
+	}
+
+	err = validator_helper.ValidatePayload(payload)
+	if err != nil {
+		http_helper.ResponseError(w, http.StatusBadRequest, err.Error(), "Request doesn't pass validation")
+		return
+	}
+
+	userRepsonse, err := c.Service.RegisterUser(r.Context(), payload)
+	if errors.Is(err, user_exception.ErrUsernameAlreadyExists) {
+		http_helper.ResponseError(w, http.StatusConflict, "Conflict error", err.Error())
+		return
+	}
+	if errors.Is(err, user_exception.ErrUserEmailAlreadyExists) {
 		http_helper.ResponseError(w, http.StatusConflict, "Conflict error", err.Error())
 		return
 	}

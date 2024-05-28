@@ -8,13 +8,13 @@ type User struct {
 	IsAdmin  bool   `json:"isAdmin"`
 }
 
-type RegisterAdminUserRequest struct {
+type RegisterUserRequest struct {
 	Username string `json:"username" validate:"required,min=5,max=30"`
 	Password string `json:"password" validate:"required,min=5,max=30"`
 	Email    string `json:"email" validate:"required,email"`
 }
 
-type RegisterAdminUserResponse struct {
+type RegisterUserResponse struct {
 	Token string `json:"token"`
 }
 

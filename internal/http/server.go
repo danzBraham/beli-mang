@@ -40,7 +40,7 @@ func (s *APIServer) Launch() error {
 	userService := services.NewUserService(userRepository)
 	userController := controllers.NewUserController(userService)
 
-	r.Mount("/admin", userController.Routes())
+	r.Mount("/", userController.Routes())
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		http_helper.ResponseError(w, http.StatusNotFound, "Not found error", "Route does not exists")

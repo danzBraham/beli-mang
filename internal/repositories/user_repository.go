@@ -13,7 +13,8 @@ import (
 type UserRepository interface {
 	VerifyUsername(ctx context.Context, username string) (bool, error)
 	VerifyAdminEmail(ctx context.Context, email string) (bool, error)
-	CreateAdminUser(ctx context.Context, user *user_entity.User) error
+	VerifyUserEmail(ctx context.Context, email string) (bool, error)
+	CreateUser(ctx context.Context, user *user_entity.User) error
 	GetUserByUsername(ctx context.Context, username string) (*user_entity.User, error)
 }
 
@@ -51,7 +52,20 @@ func (r *UserRepositoryImpl) VerifyAdminEmail(ctx context.Context, email string)
 	return true, nil
 }
 
-func (r *UserRepositoryImpl) CreateAdminUser(ctx context.Context, user *user_entity.User) error {
+func (r *UserRepositoryImpl) VerifyUserEmail(ctx context.Context, email string) (bool, error) {
+	var one int
+	query := `SELECT 1 FROM users WHERE email = $1 AND is_admin = false`
+	err := r.DB.QueryRow(ctx, query, email).Scan(&one)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (r *UserRepositoryImpl) CreateUser(ctx context.Context, user *user_entity.User) error {
 	query := `INSERT INTO users (id, username, password, email, is_admin)
 						VALUES ($1, $2, $3, $4, $5)`
 	_, err := r.DB.Exec(ctx, query, &user.Id, &user.Username, &user.Password, &user.Email, &user.IsAdmin)
