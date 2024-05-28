@@ -14,6 +14,7 @@ import (
 
 type UserService interface {
 	RegisterAdminUser(ctx context.Context, payload *user_entity.RegisterUserRequest) (*user_entity.RegisterUserResponse, error)
+	LoginAdminUser(ctx context.Context, payload *user_entity.LoginUserRequest) (*user_entity.LoginUserResponse, error)
 	RegisterUser(ctx context.Context, payload *user_entity.RegisterUserRequest) (*user_entity.RegisterUserResponse, error)
 	LoginUser(ctx context.Context, payload *user_entity.LoginUserRequest) (*user_entity.LoginUserResponse, error)
 }
@@ -67,6 +68,27 @@ func (s *UserServiceImpl) RegisterAdminUser(ctx context.Context, payload *user_e
 	}
 
 	return &user_entity.RegisterUserResponse{
+		Token: token,
+	}, nil
+}
+
+func (s *UserServiceImpl) LoginAdminUser(ctx context.Context, payload *user_entity.LoginUserRequest) (*user_entity.LoginUserResponse, error) {
+	user, err := s.Repository.GetAdminUserByUsername(ctx, payload.Username)
+	if err != nil {
+		return nil, err
+	}
+
+	err = bcrypt_helper.VerifyPassword(user.Password, payload.Password)
+	if err != nil {
+		return nil, user_exception.ErrInvalidPassword
+	}
+
+	token, err := jwt_helper.GenerateToken(2*time.Hour, user.Id, user.IsAdmin)
+	if err != nil {
+		return nil, err
+	}
+
+	return &user_entity.LoginUserResponse{
 		Token: token,
 	}, nil
 }

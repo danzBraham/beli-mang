@@ -3,6 +3,7 @@ package controllers
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	user_entity "github.com/danzBraham/beli-mang/internal/entities/user"
 	user_exception "github.com/danzBraham/beli-mang/internal/exceptions/user"
@@ -25,7 +26,7 @@ func (c *UserController) Routes() chi.Router {
 
 	r.Route("/admin", func(r chi.Router) {
 		r.Post("/register", c.handleRegisterAdminUser)
-		r.Post("/login", c.handleLoginUser)
+		r.Post("/login", c.handleLoginAdminUser)
 	})
 
 	r.Route("/users", func(r chi.Router) {
@@ -65,6 +66,52 @@ func (c *UserController) handleRegisterAdminUser(w http.ResponseWriter, r *http.
 		return
 	}
 
+	cookie := http.Cookie{
+		Name:    "Authorization",
+		Value:   userRepsonse.Token,
+		Expires: time.Now().Add(2 * time.Hour),
+	}
+	http.SetCookie(w, &cookie)
+
+	http_helper.EncodeJSON(w, http.StatusCreated, userRepsonse)
+}
+
+func (c *UserController) handleLoginAdminUser(w http.ResponseWriter, r *http.Request) {
+	payload := &user_entity.LoginUserRequest{}
+
+	err := http_helper.DecodeJSON(r, payload)
+	if err != nil {
+		http_helper.ResponseError(w, http.StatusBadRequest, err.Error(), "Failed to decode JSON")
+		return
+	}
+
+	err = validator_helper.ValidatePayload(payload)
+	if err != nil {
+		http_helper.ResponseError(w, http.StatusBadRequest, err.Error(), "Request doesn't pass validation")
+		return
+	}
+
+	userRepsonse, err := c.Service.LoginAdminUser(r.Context(), payload)
+	if errors.Is(err, user_exception.ErrUserNotFound) {
+		http_helper.ResponseError(w, http.StatusNotFound, "Not found error", err.Error())
+		return
+	}
+	if errors.Is(err, user_exception.ErrInvalidPassword) {
+		http_helper.ResponseError(w, http.StatusBadRequest, "Bad request error", err.Error())
+		return
+	}
+	if err != nil {
+		http_helper.ResponseError(w, http.StatusInternalServerError, "Internal server error", err.Error())
+		return
+	}
+
+	cookie := http.Cookie{
+		Name:    "Authorization",
+		Value:   userRepsonse.Token,
+		Expires: time.Now().Add(2 * time.Hour),
+	}
+	http.SetCookie(w, &cookie)
+
 	http_helper.EncodeJSON(w, http.StatusCreated, userRepsonse)
 }
 
@@ -97,6 +144,13 @@ func (c *UserController) handleRegisterUser(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	cookie := http.Cookie{
+		Name:    "Authorization",
+		Value:   userRepsonse.Token,
+		Expires: time.Now().Add(2 * time.Hour),
+	}
+	http.SetCookie(w, &cookie)
+
 	http_helper.EncodeJSON(w, http.StatusCreated, userRepsonse)
 }
 
@@ -128,6 +182,13 @@ func (c *UserController) handleLoginUser(w http.ResponseWriter, r *http.Request)
 		http_helper.ResponseError(w, http.StatusInternalServerError, "Internal server error", err.Error())
 		return
 	}
+
+	cookie := http.Cookie{
+		Name:    "Authorization",
+		Value:   userRepsonse.Token,
+		Expires: time.Now().Add(2 * time.Hour),
+	}
+	http.SetCookie(w, &cookie)
 
 	http_helper.EncodeJSON(w, http.StatusCreated, userRepsonse)
 }

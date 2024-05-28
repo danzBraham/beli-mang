@@ -15,6 +15,7 @@ type UserRepository interface {
 	VerifyAdminEmail(ctx context.Context, email string) (bool, error)
 	VerifyUserEmail(ctx context.Context, email string) (bool, error)
 	CreateUser(ctx context.Context, user *user_entity.User) error
+	GetAdminUserByUsername(ctx context.Context, username string) (*user_entity.User, error)
 	GetUserByUsername(ctx context.Context, username string) (*user_entity.User, error)
 }
 
@@ -75,9 +76,22 @@ func (r *UserRepositoryImpl) CreateUser(ctx context.Context, user *user_entity.U
 	return nil
 }
 
+func (r *UserRepositoryImpl) GetAdminUserByUsername(ctx context.Context, username string) (*user_entity.User, error) {
+	var user user_entity.User
+	query := `SELECT id, username, password, email, is_admin FROM users WHERE username = $1 AND is_admin = true`
+	err := r.DB.QueryRow(ctx, query, username).Scan(&user.Id, &user.Username, &user.Password, &user.Email, &user.IsAdmin)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, user_exception.ErrUserNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (r *UserRepositoryImpl) GetUserByUsername(ctx context.Context, username string) (*user_entity.User, error) {
 	var user user_entity.User
-	query := `SELECT id, username, password, email, is_admin FROM users WHERE username = $1`
+	query := `SELECT id, username, password, email, is_admin FROM users WHERE username = $1 AND is_admin = false`
 	err := r.DB.QueryRow(ctx, query, username).Scan(&user.Id, &user.Username, &user.Password, &user.Email, &user.IsAdmin)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, user_exception.ErrUserNotFound
