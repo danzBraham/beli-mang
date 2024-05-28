@@ -24,6 +24,7 @@ func (c *UserController) Routes() chi.Router {
 	r := chi.NewRouter()
 
 	r.Post("/register", c.handleRegisterAdminUser)
+	r.Post("/login", c.handleLoginUser)
 
 	return r
 }
@@ -57,9 +58,37 @@ func (c *UserController) handleRegisterAdminUser(w http.ResponseWriter, r *http.
 		return
 	}
 
-	http_helper.EncodeJSON(w, http.StatusCreated, &struct {
-		Token string `json:"token"`
-	}{
-		Token: userRepsonse.Token,
-	})
+	http_helper.EncodeJSON(w, http.StatusCreated, userRepsonse)
+}
+
+func (c *UserController) handleLoginUser(w http.ResponseWriter, r *http.Request) {
+	payload := &user_entity.LoginUserRequest{}
+
+	err := http_helper.DecodeJSON(r, payload)
+	if err != nil {
+		http_helper.ResponseError(w, http.StatusBadRequest, err.Error(), "Failed to decode JSON")
+		return
+	}
+
+	err = validator_helper.ValidatePayload(payload)
+	if err != nil {
+		http_helper.ResponseError(w, http.StatusBadRequest, err.Error(), "Request doesn't pass validation")
+		return
+	}
+
+	userRepsonse, err := c.Service.LoginUser(r.Context(), payload)
+	if errors.Is(err, user_exception.ErrUserNotFound) {
+		http_helper.ResponseError(w, http.StatusNotFound, "Not found error", err.Error())
+		return
+	}
+	if errors.Is(err, user_exception.ErrInvalidPassword) {
+		http_helper.ResponseError(w, http.StatusBadRequest, "Bad request error", err.Error())
+		return
+	}
+	if err != nil {
+		http_helper.ResponseError(w, http.StatusInternalServerError, "Internal server error", err.Error())
+		return
+	}
+
+	http_helper.EncodeJSON(w, http.StatusCreated, userRepsonse)
 }

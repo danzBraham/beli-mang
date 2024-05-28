@@ -17,3 +17,12 @@ type RegisterAdminUserRequest struct {
 type RegisterAdminUserResponse struct {
 	Token string `json:"token"`
 }
+
+type LoginUserRequest struct {
+	Username string `json:"username" validate:"required,min=5,max=30"`
+	Password string `json:"password" validate:"required,min=5,max=30"`
+}
+
+type LoginUserResponse struct {
+	Token string `json:"token"`
+}
