@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS merchants (
   category merchant_categories NULL,
   image_url TEXT NOT NULL,
   location GEOGRAPHY(Point, 4326) NOT NULL,
+  user_id VARCHAR(26) NOT NULL,
   created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  updated_at TIMESTAMP DEFAULT NOW(),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE NO ACTION ON UPDATE NO ACTION
 );

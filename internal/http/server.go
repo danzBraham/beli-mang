@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	http_helper "github.com/danzBraham/beli-mang/internal/helpers/http"
+	validator_helper "github.com/danzBraham/beli-mang/internal/helpers/validator"
 	"github.com/danzBraham/beli-mang/internal/http/controllers"
 	"github.com/danzBraham/beli-mang/internal/repositories"
 	"github.com/danzBraham/beli-mang/internal/services"
@@ -35,12 +36,25 @@ func (s *APIServer) Launch() error {
 		w.Write([]byte("Welcome to Beli Mang API"))
 	})
 
+	validator_helper.InitCustomValidation()
+
 	// User domain
 	userRepository := repositories.NewUserRepository(s.DB)
 	userService := services.NewUserService(userRepository)
 	userController := controllers.NewUserController(userService)
+	adminController := controllers.NewAdminController(userService)
 
-	r.Mount("/", userController.Routes())
+	// Merchant domain
+	merchantRepository := repositories.NewMerchantRepository(s.DB)
+	merchantService := services.NewMerchantService(merchantRepository)
+	merchantController := controllers.NewMerchantController(merchantService)
+
+	r.Route("/admin", func(r chi.Router) {
+		r.Mount("/", adminController.Routes())
+		r.Mount("/merchants", merchantController.Routes())
+	})
+
+	r.Mount("/users", userController.Routes())
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		http_helper.ResponseError(w, http.StatusNotFound, "Not found error", "Route does not exists")

@@ -1,11 +1,11 @@
 package user_entity
 
 type User struct {
-	Id       string `json:"id"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Email    string `json:"email"`
-	IsAdmin  bool   `json:"isAdmin"`
+	Id       string
+	Username string
+	Password string
+	Email    string
+	IsAdmin  bool
 }
 
 type RegisterUserRequest struct {

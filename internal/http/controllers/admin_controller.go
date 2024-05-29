@@ -13,24 +13,24 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type UserController struct {
+type AdminController struct {
 	Service services.UserService
 }
 
-func NewUserController(service services.UserService) *UserController {
-	return &UserController{Service: service}
+func NewAdminController(service services.UserService) *AdminController {
+	return &AdminController{Service: service}
 }
 
-func (c *UserController) Routes() chi.Router {
+func (c *AdminController) Routes() chi.Router {
 	r := chi.NewRouter()
 
-	r.Post("/register", c.handleRegisterUser)
-	r.Post("/login", c.handleLoginUser)
+	r.Post("/register", c.handleRegisterAdminUser)
+	r.Post("/login", c.handleLoginAdminUser)
 
 	return r
 }
 
-func (c *UserController) handleRegisterUser(w http.ResponseWriter, r *http.Request) {
+func (c *AdminController) handleRegisterAdminUser(w http.ResponseWriter, r *http.Request) {
 	payload := &user_entity.RegisterUserRequest{}
 
 	err := http_helper.DecodeJSON(r, payload)
@@ -45,12 +45,12 @@ func (c *UserController) handleRegisterUser(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	userRepsonse, err := c.Service.RegisterUser(r.Context(), payload)
+	userRepsonse, err := c.Service.RegisterAdminUser(r.Context(), payload)
 	if errors.Is(err, user_exception.ErrUsernameAlreadyExists) {
 		http_helper.ResponseError(w, http.StatusConflict, "Conflict error", err.Error())
 		return
 	}
-	if errors.Is(err, user_exception.ErrUserEmailAlreadyExists) {
+	if errors.Is(err, user_exception.ErrAdminEmailAlreadyExists) {
 		http_helper.ResponseError(w, http.StatusConflict, "Conflict error", err.Error())
 		return
 	}
@@ -69,7 +69,7 @@ func (c *UserController) handleRegisterUser(w http.ResponseWriter, r *http.Reque
 	http_helper.EncodeJSON(w, http.StatusCreated, &userRepsonse)
 }
 
-func (c *UserController) handleLoginUser(w http.ResponseWriter, r *http.Request) {
+func (c *AdminController) handleLoginAdminUser(w http.ResponseWriter, r *http.Request) {
 	payload := &user_entity.LoginUserRequest{}
 
 	err := http_helper.DecodeJSON(r, payload)
@@ -84,7 +84,7 @@ func (c *UserController) handleLoginUser(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	userRepsonse, err := c.Service.LoginUser(r.Context(), payload)
+	userRepsonse, err := c.Service.LoginAdminUser(r.Context(), payload)
 	if errors.Is(err, user_exception.ErrUserNotFound) {
 		http_helper.ResponseError(w, http.StatusNotFound, "Not found error", err.Error())
 		return
