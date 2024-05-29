@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"strconv"
 
 	merchant_entity "github.com/danzBraham/beli-mang/internal/entities/merchant"
 	http_helper "github.com/danzBraham/beli-mang/internal/helpers/http"
@@ -24,6 +25,7 @@ func (c *MerchantController) Routes() chi.Router {
 
 	r.Use(middlewares.Authenticate)
 	r.Post("/", c.handleAddMerchant)
+	r.Get("/", c.handleGetMerchants)
 
 	return r
 }
@@ -65,4 +67,43 @@ func (c *MerchantController) handleAddMerchant(w http.ResponseWriter, r *http.Re
 	}
 
 	http_helper.EncodeJSON(w, http.StatusCreated, &merchantResponse)
+}
+
+func (c *MerchantController) handleGetMerchants(w http.ResponseWriter, r *http.Request) {
+	isAdmin, ok := r.Context().Value(middlewares.ContextIsAdminKey).(bool)
+	if !ok {
+		http_helper.ResponseError(w, http.StatusUnauthorized, "IsAdmin type assertion failed", "IsAdmin not found in the context")
+		return
+	}
+	if !isAdmin {
+		http_helper.ResponseError(w, http.StatusUnauthorized, "Unauthorized error", "you're not admin")
+		return
+	}
+
+	query := r.URL.Query()
+
+	params := &merchant_entity.MerchantQueryParams{
+		Id:        query.Get("merchantId"),
+		Limit:     5,
+		Offset:    0,
+		Name:      query.Get("name"),
+		Category:  query.Get("merchantCategory"),
+		CreatedAt: query.Get("createdAt"),
+	}
+
+	if limit := query.Get("limit"); limit != "" {
+		params.Limit, _ = strconv.Atoi(limit)
+	}
+
+	if offset := query.Get("offset"); offset != "" {
+		params.Offset, _ = strconv.Atoi(offset)
+	}
+
+	merchantsResponse, err := c.Service.GetMerchants(r.Context(), params)
+	if err != nil {
+		http_helper.ResponseError(w, http.StatusInternalServerError, "Internal server error", err.Error())
+		return
+	}
+
+	http_helper.EncodeJSON(w, http.StatusOK, &merchantsResponse)
 }

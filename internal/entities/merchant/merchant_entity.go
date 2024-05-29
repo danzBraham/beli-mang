@@ -1,14 +1,12 @@
 package merchant_entity
 
-type MerchantCategories string
-
 const (
-	SmallRestaurant       MerchantCategories = "SmallRestaurant"
-	MediumRestaurant      MerchantCategories = "MediumRestaurant"
-	LargeRestaurant       MerchantCategories = "LargeRestaurant"
-	MerchandiseRestaurant MerchantCategories = "MerchandiseRestaurant"
-	BoothKiosk            MerchantCategories = "BoothKiosk"
-	ConvenienceStore      MerchantCategories = "ConvenienceStore"
+	SmallRestaurant       string = "SmallRestaurant"
+	MediumRestaurant      string = "MediumRestaurant"
+	LargeRestaurant       string = "LargeRestaurant"
+	MerchandiseRestaurant string = "MerchandiseRestaurant"
+	BoothKiosk            string = "BoothKiosk"
+	ConvenienceStore      string = "ConvenienceStore"
 )
 
 type Location struct {
@@ -17,21 +15,52 @@ type Location struct {
 }
 
 type Merchant struct {
-	Id       string             `json:"id"`
-	Name     string             `json:"name"`
-	Category MerchantCategories `json:"merchantCategory"`
-	ImageURL string             `json:"imageUrl"`
-	Location Location           `json:"location"`
-	UserId   string             `json:"userId"`
+	Id        string
+	Name      string
+	Category  string
+	ImageURL  string
+	Location  Location
+	UserId    string
+	CreatedAt string
+	UpdatedAt string
 }
 
 type AddMerchantRequest struct {
-	Name     string             `json:"name" validate:"required,min=2,max=30"`
-	Category MerchantCategories `json:"merchantCategory" validate:"oneof='SmallRestaurant' 'MediumRestaurant' 'LargeRestaurant' 'MerchandiseRestaurant' 'BoothKiosk' 'ConvenienceStore'"`
-	ImageURL string             `json:"imageUrl" validate:"required,imageurl"`
-	Location Location           `json:"location"`
+	Name     string   `json:"name" validate:"required,min=2,max=30"`
+	Category string   `json:"merchantCategory" validate:"oneof='SmallRestaurant' 'MediumRestaurant' 'LargeRestaurant' 'MerchandiseRestaurant' 'BoothKiosk' 'ConvenienceStore'"`
+	ImageURL string   `json:"imageUrl" validate:"required,imageurl"`
+	Location Location `json:"location"`
 }
 
 type AddMerchantResponse struct {
 	Id string `json:"merchantId"`
+}
+
+type MerchantQueryParams struct {
+	Id        string
+	Limit     int
+	Offset    int
+	Name      string
+	Category  string
+	CreatedAt string
+}
+
+type GetMerchant struct {
+	Id        string   `json:"merchantId"`
+	Name      string   `json:"name"`
+	Category  string   `json:"merchantCategory"`
+	ImageURL  string   `json:"imageUrl"`
+	Location  Location `json:"location"`
+	CreatedAt string   `json:"createdAt"`
+}
+
+type Meta struct {
+	Limit  int `json:"limit"`
+	Offset int `json:"offset"`
+	Total  int `json:"total"`
+}
+
+type GetMerchantResponse struct {
+	Data []*GetMerchant `json:"data"`
+	Meta Meta           `json:"meta"`
 }
