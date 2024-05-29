@@ -2,15 +2,18 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
 
 	merchant_entity "github.com/danzBraham/beli-mang/internal/entities/merchant"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type MerchantRepository interface {
+	VerifyId(ctx context.Context, merchantId string) (bool, error)
 	CreateMerchant(ctx context.Context, merchant *merchant_entity.Merchant) error
 	GetMerchants(ctx context.Context, params *merchant_entity.MerchantQueryParams) ([]*merchant_entity.Merchant, error)
 	CountMerhcants(ctx context.Context) (count int, err error)
@@ -22,6 +25,19 @@ type MerchantRepositoryImpl struct {
 
 func NewMerchantRepository(db *pgxpool.Pool) MerchantRepository {
 	return &MerchantRepositoryImpl{DB: db}
+}
+
+func (r *MerchantRepositoryImpl) VerifyId(ctx context.Context, merchantId string) (bool, error) {
+	var one int
+	query := `SELECT 1 FROM merchants WHERE id = $1`
+	err := r.DB.QueryRow(ctx, query, merchantId).Scan(&one)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func (r *MerchantRepositoryImpl) CreateMerchant(ctx context.Context, merchant *merchant_entity.Merchant) error {

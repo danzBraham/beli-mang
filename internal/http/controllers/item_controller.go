@@ -1,9 +1,11 @@
 package controllers
 
 import (
+	"errors"
 	"net/http"
 
 	item_entity "github.com/danzBraham/beli-mang/internal/entities/item"
+	merchant_exception "github.com/danzBraham/beli-mang/internal/exceptions/merchant"
 	http_helper "github.com/danzBraham/beli-mang/internal/helpers/http"
 	validator_helper "github.com/danzBraham/beli-mang/internal/helpers/validator"
 	"github.com/danzBraham/beli-mang/internal/http/middlewares"
@@ -55,6 +57,10 @@ func (c *ItemController) handleAddItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	itemResponse, err := c.Service.CreateItem(r.Context(), merchantId, paylaod)
+	if errors.Is(err, merchant_exception.ErrMerchantIdNotFound) {
+		http_helper.ResponseError(w, http.StatusNotFound, "Not found error", err.Error())
+		return
+	}
 	if err != nil {
 		http_helper.ResponseError(w, http.StatusInternalServerError, "Internal server error", err.Error())
 		return

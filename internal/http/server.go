@@ -51,7 +51,7 @@ func (s *APIServer) Launch() error {
 
 	// Item domain
 	itemRepository := repositories.NewItemRepository(s.DB)
-	itemService := services.NewItemService(itemRepository)
+	itemService := services.NewItemService(itemRepository, merchantRepository)
 	itemController := controllers.NewItemController(itemService)
 
 	r.Route("/admin", func(r chi.Router) {
