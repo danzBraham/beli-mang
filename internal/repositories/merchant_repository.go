@@ -56,21 +56,22 @@ func (r *MerchantRepositoryImpl) GetMerchants(ctx context.Context, params *merch
 		argId++
 	}
 
-	switch params.Category {
-	case merchant_entity.SmallRestaurant:
-		query += ` AND category = '` + merchant_entity.SmallRestaurant + `'`
-	case merchant_entity.MediumRestaurant:
-		query += ` AND category = '` + merchant_entity.MediumRestaurant + `'`
-	case merchant_entity.LargeRestaurant:
-		query += ` AND category = '` + merchant_entity.LargeRestaurant + `'`
-	case merchant_entity.MerchandiseRestaurant:
-		query += ` AND category = '` + merchant_entity.MerchandiseRestaurant + `'`
-	case merchant_entity.BoothKiosk:
-		query += ` AND category = '` + merchant_entity.BoothKiosk + `'`
-	case merchant_entity.ConvenienceStore:
-		query += ` AND category = '` + merchant_entity.ConvenienceStore + `'`
-	default:
-		query += " AND category = ''"
+	validCategories := map[string]bool{
+		merchant_entity.SmallRestaurant:       true,
+		merchant_entity.MediumRestaurant:      true,
+		merchant_entity.LargeRestaurant:       true,
+		merchant_entity.MerchandiseRestaurant: true,
+		merchant_entity.BoothKiosk:            true,
+		merchant_entity.ConvenienceStore:      true,
+	}
+
+	if params.Category != "" {
+		if !validCategories[params.Category] {
+			return []*merchant_entity.Merchant{}, nil
+		}
+		query += ` AND category $` + strconv.Itoa(argId)
+		args = append(args, params.Category)
+		argId++
 	}
 
 	switch params.CreatedAt {
