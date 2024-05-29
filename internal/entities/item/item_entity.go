@@ -29,3 +29,32 @@ type AddItemRequest struct {
 type AddItemResponse struct {
 	Id string `json:"itemId"`
 }
+
+type ItemQueryParams struct {
+	Id        string
+	Limit     int
+	Offset    int
+	Name      string
+	Category  string
+	CreatedAt string
+}
+
+type GetItem struct {
+	Id        string `json:"itemId"`
+	Name      string `json:"name"`
+	Category  string `json:"productCategory"`
+	Price     int    `json:"price"`
+	ImageURL  string `json:"imageUrl"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type Meta struct {
+	Limit  int `json:"limit"`
+	Offset int `json:"offset"`
+	Total  int `json:"total"`
+}
+
+type GetItemResponse struct {
+	Data []*GetItem `json:"data"`
+	Meta Meta       `json:"meta"`
+}

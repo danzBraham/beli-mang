@@ -11,6 +11,7 @@ import (
 
 type ItemService interface {
 	CreateItem(ctx context.Context, merchantId string, payload *item_entity.AddItemRequest) (*item_entity.AddItemResponse, error)
+	GetItems(ctx context.Context, merchantId string, params *item_entity.ItemQueryParams) (*item_entity.GetItemResponse, error)
 }
 
 type ItemServiceImpl struct {
@@ -50,5 +51,46 @@ func (s *ItemServiceImpl) CreateItem(ctx context.Context, merchantId string, pay
 
 	return &item_entity.AddItemResponse{
 		Id: item.Id,
+	}, nil
+}
+
+func (s *ItemServiceImpl) GetItems(ctx context.Context, merchantId string, params *item_entity.ItemQueryParams) (*item_entity.GetItemResponse, error) {
+	isMerchantIdExists, err := s.MerchantRepository.VerifyId(ctx, merchantId)
+	if err != nil {
+		return nil, err
+	}
+	if !isMerchantIdExists {
+		return nil, merchant_exception.ErrMerchantIdNotFound
+	}
+
+	items, err := s.ItemRepository.GetItems(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	getItems := []*item_entity.GetItem{}
+	for _, item := range items {
+		getItems = append(getItems, &item_entity.GetItem{
+			Id:        item.Id,
+			Name:      item.Name,
+			Category:  item.Category,
+			Price:     item.Price,
+			ImageURL:  item.ImageURL,
+			CreatedAt: item.CreatedAt,
+		})
+	}
+
+	totalItems, err := s.ItemRepository.CountItems(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &item_entity.GetItemResponse{
+		Data: getItems,
+		Meta: item_entity.Meta{
+			Limit:  params.Limit,
+			Offset: params.Offset,
+			Total:  totalItems,
+		},
 	}, nil
 }
