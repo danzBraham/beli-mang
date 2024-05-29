@@ -55,7 +55,7 @@ func (r *MerchantRepositoryImpl) GetMerchants(ctx context.Context, params *merch
 	query := `SELECT id, name, category, image_url, 
 							ST_Y(location::geometry) AS latitude,
 							ST_X(location::geometry) AS longitude,
-							user_id, created_at
+							user_id, created_at, updated_at
 						FROM merchants WHERE 1 = 1`
 	args := []interface{}{}
 	argId := 1
@@ -85,7 +85,7 @@ func (r *MerchantRepositoryImpl) GetMerchants(ctx context.Context, params *merch
 		if !validCategories[params.Category] {
 			return []*merchant_entity.Merchant{}, nil
 		}
-		query += ` AND category $` + strconv.Itoa(argId)
+		query += ` AND category = $` + strconv.Itoa(argId)
 		args = append(args, params.Category)
 		argId++
 	}
@@ -111,7 +111,7 @@ func (r *MerchantRepositoryImpl) GetMerchants(ctx context.Context, params *merch
 	merchants := []*merchant_entity.Merchant{}
 	for rows.Next() {
 		var merchant merchant_entity.Merchant
-		var timeCreated time.Time
+		var timeCreated, timeUpdated time.Time
 		err := rows.Scan(
 			&merchant.Id,
 			&merchant.Name,
@@ -121,12 +121,18 @@ func (r *MerchantRepositoryImpl) GetMerchants(ctx context.Context, params *merch
 			&merchant.Location.Long,
 			&merchant.UserId,
 			&timeCreated,
+			&timeUpdated,
 		)
 		if err != nil {
 			return nil, err
 		}
 		merchant.CreatedAt = timeCreated.Format(time.RFC3339)
+		merchant.UpdatedAt = timeUpdated.Format(time.RFC3339)
 		merchants = append(merchants, &merchant)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return merchants, nil
