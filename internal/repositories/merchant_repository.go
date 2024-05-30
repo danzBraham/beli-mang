@@ -16,6 +16,7 @@ type MerchantRepository interface {
 	VerifyId(ctx context.Context, merchantId string) (bool, error)
 	CreateMerchant(ctx context.Context, merchant *merchant_entity.Merchant) error
 	GetMerchants(ctx context.Context, params *merchant_entity.MerchantQueryParams) ([]*merchant_entity.Merchant, error)
+	GetMerchantbyId(ctx context.Context, merchantId string) (*merchant_entity.Merchant, error)
 	CountMerhcants(ctx context.Context) (count int, err error)
 }
 
@@ -56,7 +57,8 @@ func (r *MerchantRepositoryImpl) GetMerchants(ctx context.Context, params *merch
 							ST_Y(location::geometry) AS latitude,
 							ST_X(location::geometry) AS longitude,
 							user_id, created_at, updated_at
-						FROM merchants WHERE 1 = 1`
+						FROM merchants 
+						WHERE 1 = 1`
 	args := []interface{}{}
 	argId := 1
 
@@ -136,6 +138,34 @@ func (r *MerchantRepositoryImpl) GetMerchants(ctx context.Context, params *merch
 	}
 
 	return merchants, nil
+}
+
+func (r *MerchantRepositoryImpl) GetMerchantbyId(ctx context.Context, merchantId string) (*merchant_entity.Merchant, error) {
+	var merchant merchant_entity.Merchant
+	var timeCreated, timeUpdated time.Time
+	query := `SELECT id, name, category, image_url, 
+							ST_Y(location::geometry) AS latitude,
+							ST_X(location::geometry) AS longitude,
+							user_id, created_at, updated_at
+						FROM merchants
+						WHERE id = $1`
+	err := r.DB.QueryRow(ctx, query, merchantId).Scan(
+		&merchant.Id,
+		&merchant.Name,
+		&merchant.Category,
+		&merchant.ImageURL,
+		&merchant.Location.Lat,
+		&merchant.Location.Long,
+		&merchant.UserId,
+		&timeCreated,
+		&timeUpdated,
+	)
+	if err != nil {
+		return nil, err
+	}
+	merchant.CreatedAt = timeCreated.Format(time.RFC3339)
+	merchant.UpdatedAt = timeUpdated.Format(time.RFC3339)
+	return &merchant, nil
 }
 
 func (r *MerchantRepositoryImpl) CountMerhcants(ctx context.Context) (count int, err error) {

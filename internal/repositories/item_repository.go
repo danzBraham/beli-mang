@@ -12,6 +12,7 @@ import (
 type ItemRepository interface {
 	CreateItem(ctx context.Context, item *item_entity.Item) error
 	GetItems(ctx context.Context, params *item_entity.ItemQueryParams) ([]*item_entity.Item, error)
+	GetItemsByMerchantId(ctx context.Context, merchantId string) ([]*item_entity.Item, error)
 	CountItems(ctx context.Context) (count int, err error)
 }
 
@@ -35,7 +36,8 @@ func (r *ItemRepositoryImpl) CreateItem(ctx context.Context, item *item_entity.I
 
 func (r *ItemRepositoryImpl) GetItems(ctx context.Context, params *item_entity.ItemQueryParams) ([]*item_entity.Item, error) {
 	query := `SELECT id, name, category, price, image_url, merchant_id, created_at, updated_at
-						FROM items WHERE 1 = 1`
+						FROM items 
+						WHERE 1 = 1`
 	args := []interface{}{}
 	argId := 1
 
@@ -81,6 +83,45 @@ func (r *ItemRepositoryImpl) GetItems(ctx context.Context, params *item_entity.I
 	args = append(args, params.Limit, params.Offset)
 
 	rows, err := r.DB.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := []*item_entity.Item{}
+	for rows.Next() {
+		var item item_entity.Item
+		var timeCreated, timeUpdated time.Time
+		err := rows.Scan(
+			&item.Id,
+			&item.Name,
+			&item.Category,
+			&item.Price,
+			&item.ImageURL,
+			&item.MerchantId,
+			&timeCreated,
+			&timeUpdated,
+		)
+		if err != nil {
+			return nil, err
+		}
+		item.CreatedAt = timeCreated.Format(time.RFC3339)
+		item.UpdatedAt = timeUpdated.Format(time.RFC3339)
+		items = append(items, &item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return items, nil
+}
+
+func (r *ItemRepositoryImpl) GetItemsByMerchantId(ctx context.Context, merchantId string) ([]*item_entity.Item, error) {
+	query := `SELECT id, name, category, price, image_url, merchant_id, created_at, updated_at
+						FROM items 
+						WHERE merchant_id = $1`
+	rows, err := r.DB.Query(ctx, query, merchantId)
 	if err != nil {
 		return nil, err
 	}

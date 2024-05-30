@@ -54,11 +54,18 @@ func (s *APIServer) Launch() error {
 	itemService := services.NewItemService(itemRepository, merchantRepository)
 	itemController := controllers.NewItemController(itemService)
 
+	// Purchase domain
+	purchaseRepository := repositories.NewPurchaseRepository(s.DB)
+	purchaseService := services.NewPurchaseService(purchaseRepository, itemRepository)
+	purchaseController := controllers.NewPurchaseController(purchaseService)
+
 	r.Route("/admin", func(r chi.Router) {
 		r.Mount("/", adminController.Routes())
 		r.Mount("/merchants", merchantController.Routes())
 		r.Mount("/merchants/{merchantId}/items", itemController.Routes())
 	})
+
+	r.Mount("/merchants", purchaseController.MerchantRoutes())
 
 	r.Mount("/users", userController.Routes())
 

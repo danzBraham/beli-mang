@@ -11,3 +11,5 @@ CREATE TABLE IF NOT EXISTS merchants (
   updated_at TIMESTAMP DEFAULT NOW(),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE NO ACTION ON UPDATE NO ACTION
 );
+
+CREATE INDEX idx_merchants_location ON merchants USING GIST (location);
