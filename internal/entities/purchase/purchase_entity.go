@@ -77,3 +77,17 @@ type OrderItem struct {
 	CreatedAt       string
 	UpdatedAt       string
 }
+
+type UserOrder struct {
+	Id         string
+	EstimateId string
+	UserId     string
+}
+
+type UserOrderRequest struct {
+	EstimateId string `json:"calculatedEstimateId" validate:"required"`
+}
+
+type UserOrderResponse struct {
+	OrderId string `json:"orderId"`
+}

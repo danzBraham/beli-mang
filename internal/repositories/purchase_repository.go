@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -11,12 +12,15 @@ import (
 	purchase_entity "github.com/danzBraham/beli-mang/internal/entities/purchase"
 	purchase_exception "github.com/danzBraham/beli-mang/internal/exceptions/purchase"
 	formula_helper "github.com/danzBraham/beli-mang/internal/helpers/formula"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type PurchaseRepository interface {
 	GetMerchantsNearby(ctx context.Context, location *merchant_entity.Location, params *purchase_entity.MerchantNearbyQueryParams) ([]*merchant_entity.Merchant, error)
 	CreateEstimateOrder(ctx context.Context, estimateOrder *purchase_entity.EstimateOrder, orderMerchants []*purchase_entity.OrderMerchant, orderItems []*purchase_entity.OrderItem) (*purchase_entity.EstimateOrder, error)
+	CreateOrder(ctx context.Context, userOrder *purchase_entity.UserOrder) error
+	VerifyEstimateId(ctx context.Context, estimateId string) (bool, error)
 }
 
 type PurchaseRepositoryImpl struct {
@@ -259,4 +263,29 @@ func (r *PurchaseRepositoryImpl) CreateEstimateOrder(ctx context.Context, estima
 		TotalPrice:            totalPrice,
 		EstimatedDeliveryTime: estimatedDeliveryTime,
 	}, nil
+}
+
+func (r *PurchaseRepositoryImpl) CreateOrder(ctx context.Context, userOrder *purchase_entity.UserOrder) error {
+	query := `
+		INSERT INTO orders (id, estimate_id, user_id)
+		VALUES ($1, $2, $3)
+	`
+	_, err := r.DB.Exec(ctx, query, &userOrder.Id, &userOrder.EstimateId, &userOrder.UserId)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *PurchaseRepositoryImpl) VerifyEstimateId(ctx context.Context, estimateId string) (bool, error) {
+	var one int
+	query := `SELECT 1 FROM estimates WHERE id = $1`
+	err := r.DB.QueryRow(ctx, query, estimateId).Scan(&one)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }

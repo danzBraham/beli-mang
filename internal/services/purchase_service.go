@@ -8,6 +8,7 @@ import (
 	purchase_entity "github.com/danzBraham/beli-mang/internal/entities/purchase"
 	item_exception "github.com/danzBraham/beli-mang/internal/exceptions/item"
 	merchant_exception "github.com/danzBraham/beli-mang/internal/exceptions/merchant"
+	purchase_exception "github.com/danzBraham/beli-mang/internal/exceptions/purchase"
 	"github.com/danzBraham/beli-mang/internal/repositories"
 	"github.com/oklog/ulid/v2"
 )
@@ -15,6 +16,7 @@ import (
 type PurchaseService interface {
 	GetMerchantsNearby(ctx context.Context, location *merchant_entity.Location, params *purchase_entity.MerchantNearbyQueryParams) (*purchase_entity.GetMerchantsNearbyResponse, error)
 	EstimateOrder(ctx context.Context, userId string, payload *purchase_entity.UserEstimateRequest) (*purchase_entity.UserEstimateResponse, error)
+	CreateOrder(ctx context.Context, userId string, payload *purchase_entity.UserOrderRequest) (*purchase_entity.UserOrderResponse, error)
 }
 
 type PurchaseServiceImpl struct {
@@ -134,5 +136,30 @@ func (s *PurchaseServiceImpl) EstimateOrder(ctx context.Context, userId string, 
 		TotalPrice:      estimateOrder.TotalPrice,
 		DeliveryTime:    estimateOrder.EstimatedDeliveryTime,
 		EstimateOrderId: estimateOrder.Id,
+	}, nil
+}
+
+func (s *PurchaseServiceImpl) CreateOrder(ctx context.Context, userId string, payload *purchase_entity.UserOrderRequest) (*purchase_entity.UserOrderResponse, error) {
+	isEstimateIdExists, err := s.PurchaseRepository.VerifyEstimateId(ctx, payload.EstimateId)
+	if err != nil {
+		return nil, err
+	}
+	if !isEstimateIdExists {
+		return nil, purchase_exception.ErrEstimateIdNotFound
+	}
+
+	userOrder := &purchase_entity.UserOrder{
+		Id:         ulid.Make().String(),
+		EstimateId: payload.EstimateId,
+		UserId:     userId,
+	}
+
+	err = s.PurchaseRepository.CreateOrder(ctx, userOrder)
+	if err != nil {
+		return nil, err
+	}
+
+	return &purchase_entity.UserOrderResponse{
+		OrderId: userOrder.Id,
 	}, nil
 }

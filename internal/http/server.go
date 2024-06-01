@@ -73,6 +73,7 @@ func (s *APIServer) Launch() error {
 		r.Group(func(r chi.Router) {
 			r.Use(middlewares.Authenticate)
 			r.Post("/estimate", purchaseController.HandleUserEstimateOrder)
+			r.Post("/orders", purchaseController.HandleUserOrder)
 		})
 	})
 

@@ -138,3 +138,47 @@ func (c *PurchaseController) HandleUserEstimateOrder(w http.ResponseWriter, r *h
 
 	http_helper.EncodeJSON(w, http.StatusOK, userEstimateResponse)
 }
+
+func (c *PurchaseController) HandleUserOrder(w http.ResponseWriter, r *http.Request) {
+	isAdmin, ok := r.Context().Value(middlewares.ContextIsAdminKey).(bool)
+	if !ok {
+		http_helper.ResponseError(w, http.StatusUnauthorized, "IsAdmin type assertion failed", "IsAdmin not found in the context")
+		return
+	}
+	if isAdmin {
+		http_helper.ResponseError(w, http.StatusUnauthorized, "Unauthorized error", "you're not a user")
+		return
+	}
+
+	userId, ok := r.Context().Value(middlewares.ContextUserIdKey).(string)
+	if !ok {
+		http_helper.ResponseError(w, http.StatusUnauthorized, "UserId type assertion failed", "UserId not found in the context")
+		return
+	}
+
+	payload := &purchase_entity.UserOrderRequest{}
+
+	err := http_helper.DecodeJSON(r, payload)
+	if err != nil {
+		http_helper.ResponseError(w, http.StatusBadRequest, err.Error(), "Failed to decode JSON")
+		return
+	}
+
+	err = validator_helper.ValidatePayload(payload)
+	if err != nil {
+		http_helper.ResponseError(w, http.StatusBadRequest, err.Error(), "Request doesn't pass validation")
+		return
+	}
+
+	userOrderResponse, err := c.Service.CreateOrder(r.Context(), userId, payload)
+	if errors.Is(err, purchase_exception.ErrEstimateIdNotFound) {
+		http_helper.ResponseError(w, http.StatusNotFound, "Not found error", err.Error())
+		return
+	}
+	if err != nil {
+		http_helper.ResponseError(w, http.StatusInternalServerError, "Internal server error", err.Error())
+		return
+	}
+
+	http_helper.EncodeJSON(w, http.StatusCreated, userOrderResponse)
+}
