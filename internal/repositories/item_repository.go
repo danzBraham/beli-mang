@@ -2,14 +2,17 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"time"
 
 	item_entity "github.com/danzBraham/beli-mang/internal/entities/item"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type ItemRepository interface {
+	VerifyId(ctx context.Context, itemId string) (bool, error)
 	CreateItem(ctx context.Context, item *item_entity.Item) error
 	GetItems(ctx context.Context, params *item_entity.ItemQueryParams) ([]*item_entity.Item, error)
 	GetItemsByMerchantId(ctx context.Context, merchantId string) ([]*item_entity.Item, error)
@@ -22,6 +25,19 @@ type ItemRepositoryImpl struct {
 
 func NewItemRepository(db *pgxpool.Pool) ItemRepository {
 	return &ItemRepositoryImpl{DB: db}
+}
+
+func (r *ItemRepositoryImpl) VerifyId(ctx context.Context, itemId string) (bool, error) {
+	var one int
+	query := `SELECT 1 FROM items WHERE id = $1`
+	err := r.DB.QueryRow(ctx, query, itemId).Scan(&one)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func (r *ItemRepositoryImpl) CreateItem(ctx context.Context, item *item_entity.Item) error {

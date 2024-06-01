@@ -7,6 +7,7 @@ import (
 	http_helper "github.com/danzBraham/beli-mang/internal/helpers/http"
 	validator_helper "github.com/danzBraham/beli-mang/internal/helpers/validator"
 	"github.com/danzBraham/beli-mang/internal/http/controllers"
+	"github.com/danzBraham/beli-mang/internal/http/middlewares"
 	"github.com/danzBraham/beli-mang/internal/repositories"
 	"github.com/danzBraham/beli-mang/internal/services"
 	"github.com/go-chi/chi/v5"
@@ -56,7 +57,7 @@ func (s *APIServer) Launch() error {
 
 	// Purchase domain
 	purchaseRepository := repositories.NewPurchaseRepository(s.DB)
-	purchaseService := services.NewPurchaseService(purchaseRepository, itemRepository)
+	purchaseService := services.NewPurchaseService(purchaseRepository, merchantRepository, itemRepository)
 	purchaseController := controllers.NewPurchaseController(purchaseService)
 
 	r.Route("/admin", func(r chi.Router) {
@@ -67,7 +68,13 @@ func (s *APIServer) Launch() error {
 
 	r.Mount("/merchants", purchaseController.MerchantRoutes())
 
-	r.Mount("/users", userController.Routes())
+	r.Route("/users", func(r chi.Router) {
+		r.Mount("/", userController.Routes())
+		r.Group(func(r chi.Router) {
+			r.Use(middlewares.Authenticate)
+			r.Post("/estimate", purchaseController.HandleUserEstimateOrder)
+		})
+	})
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		http_helper.ResponseError(w, http.StatusNotFound, "Not found error", "Route does not exists")

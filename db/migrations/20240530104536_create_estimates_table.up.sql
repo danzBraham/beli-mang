@@ -1,0 +1,42 @@
+CREATE TABLE IF NOT EXISTS estimates (
+  id VARCHAR(26) PRIMARY KEY NOT NULL,
+  user_location GEOGRAPHY(Point, 4326) NOT NULL,
+  total_price INT NOT NULL DEFAULT 0,
+  estimated_delivery_time INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+  id VARCHAR(26) PRIMARY KEY NOT NULL,
+  estimate_id VARCHAR(26) NOT NULL,
+  user_id VARCHAR(26) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  FOREIGN KEY (estimate_id) REFERENCES estimates(id) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE NO ACTION ON UPDATE NO ACTION
+);
+
+CREATE TABLE IF NOT EXISTS order_merchants (
+  id VARCHAR(26) PRIMARY KEY NOT NULL,
+  merchant_id VARCHAR(26) NOT NULL,
+  total_merchant_price INT NOT NULL DEFAULT 0,
+  is_starting_point BOOLEAN NOT NULL DEFAULT false,
+  estimate_id VARCHAR(26) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  FOREIGN KEY (merchant_id) REFERENCES merchants(id) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  FOREIGN KEY (estimate_id) REFERENCES estimates(id) ON DELETE NO ACTION ON UPDATE NO ACTION
+);
+
+CREATE TABLE IF NOT EXISTS order_items (
+  id VARCHAR(26) PRIMARY KEY NOT NULL,
+  item_id VARCHAR(26) NOT NULL,
+  quantity INT NOT NULL,
+  total_item_price INT NOT NULL DEFAULT 0,
+  order_merchant_id VARCHAR(26) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  FOREIGN KEY (order_merchant_id) REFERENCES order_merchants(id) ON DELETE NO ACTION ON UPDATE NO ACTION
+);

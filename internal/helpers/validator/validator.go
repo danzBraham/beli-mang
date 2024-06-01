@@ -6,6 +6,7 @@ import (
 	"path"
 	"strings"
 
+	purchase_entity "github.com/danzBraham/beli-mang/internal/entities/purchase"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -24,6 +25,7 @@ func formatValidatorErrors(err error) string {
 
 func InitCustomValidation() {
 	validate.RegisterValidation("imageurl", validateImageURL)
+	validate.RegisterValidation("onestartingpoint", validateOneStartingPoint)
 }
 
 func ValidatePayload(payload interface{}) error {
@@ -49,4 +51,20 @@ func validateImageURL(fl validator.FieldLevel) bool {
 		return false
 	}
 	return true
+}
+
+func validateOneStartingPoint(fl validator.FieldLevel) bool {
+	orders, ok := fl.Field().Interface().([]purchase_entity.Order)
+	if !ok {
+		return false
+	}
+
+	count := 0
+	for _, order := range orders {
+		if order.IsStartingPoint {
+			count++
+		}
+	}
+
+	return count == 1
 }
