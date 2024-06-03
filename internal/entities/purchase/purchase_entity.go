@@ -91,3 +91,40 @@ type UserOrderRequest struct {
 type UserOrderResponse struct {
 	OrderId string `json:"orderId"`
 }
+
+type OrderQueryParams struct {
+	MerchantId string
+	Limit      int
+	Offset     int
+	Name       string
+	Category   string
+}
+
+type GetMerchant struct {
+	Id        string   `json:"merchantId"`
+	Name      string   `json:"name"`
+	Category  string   `json:"merchantCategory"`
+	ImageURL  string   `json:"imageUrl"`
+	Location  Location `json:"location"`
+	CreatedAt string   `json:"createdAt"`
+}
+
+type GetItem struct {
+	Id        string `json:"itemId"`
+	Name      string `json:"name"`
+	Category  string `json:"productCategory"`
+	Price     int    `json:"price"`
+	Quantity  int    `json:"quantity"`
+	ImageURL  string `json:"imageUrl"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type GetOrder struct {
+	Merchant GetMerchant `json:"merchant"`
+	Items    []GetItem   `json:"items"`
+}
+
+type GetUserOrder struct {
+	OrderId string     `json:"orderId"`
+	Orders  []GetOrder `json:"orders"`
+}

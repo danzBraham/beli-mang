@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strconv"
 
-	merchant_entity "github.com/danzBraham/beli-mang/internal/entities/merchant"
 	purchase_entity "github.com/danzBraham/beli-mang/internal/entities/purchase"
 	item_exception "github.com/danzBraham/beli-mang/internal/exceptions/item"
 	merchant_exception "github.com/danzBraham/beli-mang/internal/exceptions/merchant"
@@ -55,7 +54,7 @@ func (c *PurchaseController) handleGetMerchantsNearby(w http.ResponseWriter, r *
 		http_helper.ResponseError(w, http.StatusInternalServerError, "Internal server error", err.Error())
 		return
 	}
-	location := &merchant_entity.Location{
+	location := &purchase_entity.Location{
 		Lat:  lat,
 		Long: long,
 	}
@@ -181,4 +180,48 @@ func (c *PurchaseController) HandleUserOrder(w http.ResponseWriter, r *http.Requ
 	}
 
 	http_helper.EncodeJSON(w, http.StatusCreated, userOrderResponse)
+}
+
+func (c *PurchaseController) HandleGetUserOrders(w http.ResponseWriter, r *http.Request) {
+	isAdmin, ok := r.Context().Value(middlewares.ContextIsAdminKey).(bool)
+	if !ok {
+		http_helper.ResponseError(w, http.StatusUnauthorized, "IsAdmin type assertion failed", "IsAdmin not found in the context")
+		return
+	}
+	if isAdmin {
+		http_helper.ResponseError(w, http.StatusUnauthorized, "Unauthorized error", "you're not a user")
+		return
+	}
+
+	userId, ok := r.Context().Value(middlewares.ContextUserIdKey).(string)
+	if !ok {
+		http_helper.ResponseError(w, http.StatusUnauthorized, "UserId type assertion failed", "UserId not found in the context")
+		return
+	}
+
+	query := r.URL.Query()
+
+	params := &purchase_entity.OrderQueryParams{
+		MerchantId: query.Get("merchantId"),
+		Limit:      5,
+		Offset:     0,
+		Name:       query.Get("name"),
+		Category:   query.Get("merchantCategory"),
+	}
+
+	if limit := query.Get("limit"); limit != "" {
+		params.Limit, _ = strconv.Atoi(limit)
+	}
+
+	if offset := query.Get("offset"); offset != "" {
+		params.Offset, _ = strconv.Atoi(offset)
+	}
+
+	userOrdersResponse, err := c.Service.GetUserOrders(r.Context(), userId, params)
+	if err != nil {
+		http_helper.ResponseError(w, http.StatusInternalServerError, "Internal server error", err.Error())
+		return
+	}
+
+	http_helper.EncodeJSON(w, http.StatusOK, userOrdersResponse)
 }

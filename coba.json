@@ -1,0 +1,31 @@
+[
+  {
+    "orderId": "string",
+    "orders": [
+      {
+        "merchant": {
+          "merchantId": "",
+          "name": "",
+          "merchantCategory": "",
+          "imageUrl": "",
+          "location": {
+            "lat": 1,
+            "long": 1
+          },
+          "createdAt": ""
+        },
+        "items": [
+          {
+            "itemId": "",
+            "name": "string",
+            "productCategory": "",
+            "price": 1,
+            "quantity": 1,
+            "imageUrl": "",
+            "createdAt": ""
+          }
+        ]
+      }
+    ]
+  }
+]

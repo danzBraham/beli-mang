@@ -74,6 +74,7 @@ func (s *APIServer) Launch() error {
 			r.Use(middlewares.Authenticate)
 			r.Post("/estimate", purchaseController.HandleUserEstimateOrder)
 			r.Post("/orders", purchaseController.HandleUserOrder)
+			r.Get("/orders", purchaseController.HandleGetUserOrders)
 		})
 	})
 

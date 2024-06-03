@@ -17,10 +17,11 @@ import (
 )
 
 type PurchaseRepository interface {
-	GetMerchantsNearby(ctx context.Context, location *merchant_entity.Location, params *purchase_entity.MerchantNearbyQueryParams) ([]*merchant_entity.Merchant, error)
+	GetMerchantsNearby(ctx context.Context, location *purchase_entity.Location, params *purchase_entity.MerchantNearbyQueryParams) ([]*merchant_entity.Merchant, error)
 	CreateEstimateOrder(ctx context.Context, estimateOrder *purchase_entity.EstimateOrder, orderMerchants []*purchase_entity.OrderMerchant, orderItems []*purchase_entity.OrderItem) (*purchase_entity.EstimateOrder, error)
 	CreateOrder(ctx context.Context, userOrder *purchase_entity.UserOrder) error
 	VerifyEstimateId(ctx context.Context, estimateId string) (bool, error)
+	GetOrders(ctx context.Context, userId string, params *purchase_entity.OrderQueryParams) ([]*purchase_entity.GetUserOrder, error)
 }
 
 type PurchaseRepositoryImpl struct {
@@ -31,7 +32,7 @@ func NewPurchaseRepository(db *pgxpool.Pool) PurchaseRepository {
 	return &PurchaseRepositoryImpl{DB: db}
 }
 
-func (r *PurchaseRepositoryImpl) GetMerchantsNearby(ctx context.Context, location *merchant_entity.Location, params *purchase_entity.MerchantNearbyQueryParams) ([]*merchant_entity.Merchant, error) {
+func (r *PurchaseRepositoryImpl) GetMerchantsNearby(ctx context.Context, location *purchase_entity.Location, params *purchase_entity.MerchantNearbyQueryParams) ([]*merchant_entity.Merchant, error) {
 	query := `SELECT id, name, category, image_url, 
 							ST_Y(location::geometry) AS latitude,
 							ST_X(location::geometry) AS longitude,
@@ -288,4 +289,138 @@ func (r *PurchaseRepositoryImpl) VerifyEstimateId(ctx context.Context, estimateI
 		return false, err
 	}
 	return true, nil
+}
+
+func (r *PurchaseRepositoryImpl) GetOrders(ctx context.Context, userId string, params *purchase_entity.OrderQueryParams) ([]*purchase_entity.GetUserOrder, error) {
+	query := `
+		SELECT
+			o.id,
+			m.id, m.name, m.category, m.image_url, ST_Y(m.location::geometry) AS latitude, ST_X(m.location::geometry) AS longitude, m.created_at,
+			i.id, i.name, i.category, i.price, oi.quantity, i.image_url, i.created_at
+		FROM orders o
+		INNER JOIN order_merchants om ON om.estimate_id = o.estimate_id
+		INNER JOIN merchants m ON m.id = om.merchant_id
+		INNER JOIN order_items oi ON oi.order_merchant_id = om.id
+		INNER JOIN items i ON i.id = oi.item_id
+		WHERE o.user_id = $1
+	`
+	args := []interface{}{}
+	args = append(args, userId)
+	argId := 2
+
+	if params.MerchantId != "" {
+		query += ` AND m.id = $` + strconv.Itoa(argId)
+		args = append(args, params.MerchantId)
+		argId++
+	}
+
+	if params.Name != "" {
+		query += ` AND m.name ILIKE $` + strconv.Itoa(argId) + ` OR i.name ILIKE $` + strconv.Itoa(argId)
+		args = append(args, "%"+params.Name+"%")
+		argId++
+	}
+
+	validCategories := map[string]bool{
+		merchant_entity.SmallRestaurant:       true,
+		merchant_entity.MediumRestaurant:      true,
+		merchant_entity.LargeRestaurant:       true,
+		merchant_entity.MerchandiseRestaurant: true,
+		merchant_entity.BoothKiosk:            true,
+		merchant_entity.ConvenienceStore:      true,
+	}
+
+	if params.Category != "" {
+		if !validCategories[params.Category] {
+			return []*purchase_entity.GetUserOrder{}, nil
+		}
+		query += ` AND m.category = $` + strconv.Itoa(argId)
+		args = append(args, params.Category)
+		argId++
+	}
+
+	query += ` LIMIT $` + strconv.Itoa(argId) + ` OFFSET $` + strconv.Itoa(argId+1)
+	args = append(args, params.Limit, params.Offset)
+
+	rows, err := r.DB.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	ordersMap := make(map[string]*purchase_entity.GetUserOrder)
+	for rows.Next() {
+		var (
+			orderId, merchantId, merchantName, merchantCategory, merchantImageUrl string
+			merchantLat, merchantLong                                             float64
+			merchantCreatedAt, itemCreatedAt                                      time.Time
+			itemId, itemName, itemCategory, itemImageUrl                          string
+			itemPrice, itemQuantity                                               int
+		)
+
+		err := rows.Scan(
+			&orderId,
+			&merchantId, &merchantName, &merchantCategory, &merchantImageUrl, &merchantLat, &merchantLong, &merchantCreatedAt,
+			&itemId, &itemName, &itemCategory, &itemPrice, &itemQuantity, &itemImageUrl, &itemCreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if _, exists := ordersMap[orderId]; !exists {
+			ordersMap[orderId] = &purchase_entity.GetUserOrder{
+				OrderId: orderId,
+				Orders:  []purchase_entity.GetOrder{},
+			}
+		}
+
+		order := ordersMap[orderId]
+		foundMerchant := false
+
+		for i := range order.Orders {
+			if order.Orders[i].Merchant.Id == merchantId {
+				order.Orders[i].Items = append(order.Orders[i].Items, purchase_entity.GetItem{
+					Id:        itemId,
+					Name:      itemName,
+					Category:  itemCategory,
+					Price:     itemPrice,
+					Quantity:  itemQuantity,
+					ImageURL:  itemImageUrl,
+					CreatedAt: itemCreatedAt.Format(time.RFC3339Nano),
+				})
+				foundMerchant = true
+				break
+			}
+		}
+
+		if !foundMerchant {
+			order.Orders = append(order.Orders, purchase_entity.GetOrder{
+				Merchant: purchase_entity.GetMerchant{
+					Id:        merchantId,
+					Name:      merchantName,
+					Category:  merchantCategory,
+					ImageURL:  merchantImageUrl,
+					Location:  purchase_entity.Location{Lat: merchantLat, Long: merchantLong},
+					CreatedAt: merchantCreatedAt.Format(time.RFC3339Nano),
+				},
+				Items: []purchase_entity.GetItem{
+					{
+						Id:        itemId,
+						Name:      itemName,
+						Category:  itemCategory,
+						Price:     itemPrice,
+						Quantity:  itemQuantity,
+						ImageURL:  itemImageUrl,
+						CreatedAt: itemCreatedAt.Format(time.RFC3339Nano),
+					},
+				},
+			})
+		}
+	}
+
+	orders := make([]*purchase_entity.GetUserOrder, 0, len(ordersMap))
+	for _, order := range ordersMap {
+		orders = append(orders, order)
+	}
+
+	return orders, nil
 }

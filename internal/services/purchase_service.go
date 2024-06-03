@@ -14,9 +14,10 @@ import (
 )
 
 type PurchaseService interface {
-	GetMerchantsNearby(ctx context.Context, location *merchant_entity.Location, params *purchase_entity.MerchantNearbyQueryParams) (*purchase_entity.GetMerchantsNearbyResponse, error)
+	GetMerchantsNearby(ctx context.Context, location *purchase_entity.Location, params *purchase_entity.MerchantNearbyQueryParams) (*purchase_entity.GetMerchantsNearbyResponse, error)
 	EstimateOrder(ctx context.Context, userId string, payload *purchase_entity.UserEstimateRequest) (*purchase_entity.UserEstimateResponse, error)
 	CreateOrder(ctx context.Context, userId string, payload *purchase_entity.UserOrderRequest) (*purchase_entity.UserOrderResponse, error)
+	GetUserOrders(ctx context.Context, userId string, params *purchase_entity.OrderQueryParams) ([]*purchase_entity.GetUserOrder, error)
 }
 
 type PurchaseServiceImpl struct {
@@ -37,7 +38,7 @@ func NewPurchaseService(
 	}
 }
 
-func (s *PurchaseServiceImpl) GetMerchantsNearby(ctx context.Context, location *merchant_entity.Location, params *purchase_entity.MerchantNearbyQueryParams) (*purchase_entity.GetMerchantsNearbyResponse, error) {
+func (s *PurchaseServiceImpl) GetMerchantsNearby(ctx context.Context, location *purchase_entity.Location, params *purchase_entity.MerchantNearbyQueryParams) (*purchase_entity.GetMerchantsNearbyResponse, error) {
 	merchants, err := s.PurchaseRepository.GetMerchantsNearby(ctx, location, params)
 	if err != nil {
 		return nil, err
@@ -162,4 +163,13 @@ func (s *PurchaseServiceImpl) CreateOrder(ctx context.Context, userId string, pa
 	return &purchase_entity.UserOrderResponse{
 		OrderId: userOrder.Id,
 	}, nil
+}
+
+func (s *PurchaseServiceImpl) GetUserOrders(ctx context.Context, userId string, params *purchase_entity.OrderQueryParams) ([]*purchase_entity.GetUserOrder, error) {
+	getOrders, err := s.PurchaseRepository.GetOrders(ctx, userId, params)
+	if err != nil {
+		return nil, err
+	}
+
+	return getOrders, nil
 }
