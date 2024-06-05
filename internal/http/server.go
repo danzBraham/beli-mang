@@ -60,6 +60,9 @@ func (s *APIServer) Launch() error {
 	purchaseService := services.NewPurchaseService(purchaseRepository, merchantRepository, itemRepository)
 	purchaseController := controllers.NewPurchaseController(purchaseService)
 
+	// Media domain
+	mediaController := controllers.NewMediaController()
+
 	r.Route("/admin", func(r chi.Router) {
 		r.Mount("/", adminController.Routes())
 		r.Mount("/merchants", merchantController.Routes())
@@ -76,6 +79,11 @@ func (s *APIServer) Launch() error {
 			r.Post("/orders", purchaseController.HandleUserOrder)
 			r.Get("/orders", purchaseController.HandleGetUserOrders)
 		})
+	})
+
+	r.Group(func(r chi.Router) {
+		r.Use(middlewares.Authenticate)
+		r.Post("/image", mediaController.HandleUploadImage)
 	})
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
