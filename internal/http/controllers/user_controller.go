@@ -105,5 +105,5 @@ func (c *UserController) handleLoginUser(w http.ResponseWriter, r *http.Request)
 	}
 	http.SetCookie(w, &cookie)
 
-	http_helper.EncodeJSON(w, http.StatusCreated, &userRepsonse)
+	http_helper.EncodeJSON(w, http.StatusOK, &userRepsonse)
 }

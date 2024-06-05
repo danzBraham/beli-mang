@@ -105,5 +105,5 @@ func (c *AdminController) handleLoginAdminUser(w http.ResponseWriter, r *http.Re
 	}
 	http.SetCookie(w, &cookie)
 
-	http_helper.EncodeJSON(w, http.StatusCreated, &userRepsonse)
+	http_helper.EncodeJSON(w, http.StatusOK, &userRepsonse)
 }

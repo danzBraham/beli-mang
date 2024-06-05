@@ -112,5 +112,5 @@ func (c *ItemController) handleGetItems(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	http_helper.EncodeJSON(w, http.StatusCreated, &itemsResponse)
+	http_helper.EncodeJSON(w, http.StatusOK, &itemsResponse)
 }
