@@ -128,10 +128,10 @@ func (r *PurchaseRepositoryImpl) CreateEstimateOrder(ctx context.Context, estima
 		}
 	}()
 
-	// Calculate cartesian distance and check if any merhcant is too far
-	startLat := estimateOrder.UserLocation.Lat
-	startLong := estimateOrder.UserLocation.Long
 	const MaxDistance = 3.0 // Max distance in km
+
+	// Collect all points for smallest enclosing circle calculation
+	points := []purchase_entity.Location{estimateOrder.UserLocation}
 
 	getMerchantLocationQuery := `
 		SELECT ST_Y(location::geometry) AS latitude, ST_X(location::geometry) AS longitude
@@ -145,11 +145,13 @@ func (r *PurchaseRepositoryImpl) CreateEstimateOrder(ctx context.Context, estima
 		if err != nil {
 			return nil, err
 		}
+		points = append(points, purchase_entity.Location{Long: merchantLong, Lat: merchantLat})
+	}
 
-		distance := formula_helper.Haversine(startLat, merchantLat, startLong, merchantLong)
-		if distance > MaxDistance {
-			return nil, purchase_exception.ErrDistanceTooFar
-		}
+	// Check if any point exceeds the MaxDistance using smallest enclosing circle
+	circle := formula_helper.SmallestEnclosingCircle(points)
+	if circle.Radius > MaxDistance {
+		return nil, purchase_exception.ErrDistanceTooFar
 	}
 
 	// Create order
@@ -238,7 +240,7 @@ func (r *PurchaseRepositoryImpl) CreateEstimateOrder(ctx context.Context, estima
 			return nil, err
 		}
 
-		distance := formula_helper.Haversine(startLat, merchantLat, startLong, merchantLong)
+		distance := formula_helper.Haversine(estimateOrder.UserLocation.Lat, merchantLat, estimateOrder.UserLocation.Long, merchantLong)
 		if distance > maxDistance {
 			maxDistance = distance
 		}
