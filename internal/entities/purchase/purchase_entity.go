@@ -18,8 +18,15 @@ type GetMerchantsNearby struct {
 	Items    []*item_entity.GetItem       `json:"items"`
 }
 
+type Meta struct {
+	Limit  int `json:"limit"`
+	Offset int `json:"offset"`
+	Total  int `json:"total"`
+}
+
 type GetMerchantsNearbyResponse struct {
 	Data []*GetMerchantsNearby `json:"data"`
+	Meta *Meta                 `json:"meta"`
 }
 
 type Location struct {

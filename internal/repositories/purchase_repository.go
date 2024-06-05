@@ -38,7 +38,6 @@ func (r *PurchaseRepositoryImpl) GetMerchantsNearby(ctx context.Context, locatio
 							ST_X(location::geometry) AS longitude,
 							user_id, created_at, updated_at
 						FROM merchants
-						WHERE 1 = 1
 						ORDER BY location <-> ST_SetSRID(ST_MakePoint($1, $2), 4326)`
 	args := []interface{}{}
 	args = append(args, location.Long, location.Lat)

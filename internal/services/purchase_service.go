@@ -79,8 +79,18 @@ func (s *PurchaseServiceImpl) GetMerchantsNearby(ctx context.Context, location *
 		})
 	}
 
+	countMerchants, err := s.MerchantRepository.CountMerhcants(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	return &purchase_entity.GetMerchantsNearbyResponse{
 		Data: getMerchants,
+		Meta: &purchase_entity.Meta{
+			Limit:  params.Limit,
+			Offset: params.Offset,
+			Total:  countMerchants,
+		},
 	}, nil
 }
 
