@@ -24,16 +24,7 @@ func NewPurchaseController(service services.PurchaseService) *PurchaseController
 	return &PurchaseController{Service: service}
 }
 
-func (c *PurchaseController) MerchantRoutes() chi.Router {
-	r := chi.NewRouter()
-
-	r.Use(middlewares.Authenticate)
-	r.Get("/nearby/{lat},{long}", c.handleGetMerchantsNearby)
-
-	return r
-}
-
-func (c *PurchaseController) handleGetMerchantsNearby(w http.ResponseWriter, r *http.Request) {
+func (c *PurchaseController) HandleGetMerchantsNearby(w http.ResponseWriter, r *http.Request) {
 	isAdmin, ok := r.Context().Value(middlewares.ContextIsAdminKey).(bool)
 	if !ok {
 		http_helper.ResponseError(w, http.StatusUnauthorized, "IsAdmin type assertion failed", "IsAdmin not found in the context")
@@ -46,7 +37,7 @@ func (c *PurchaseController) handleGetMerchantsNearby(w http.ResponseWriter, r *
 
 	lat, err := strconv.ParseFloat(chi.URLParam(r, "lat"), 64)
 	if err != nil {
-		http_helper.ResponseError(w, http.StatusBadRequest, "Bad request error error", "lat is not valid")
+		http_helper.ResponseError(w, http.StatusBadRequest, "Bad request error", "lat is not valid")
 		return
 	}
 	long, err := strconv.ParseFloat(chi.URLParam(r, "long"), 64)
@@ -54,9 +45,15 @@ func (c *PurchaseController) handleGetMerchantsNearby(w http.ResponseWriter, r *
 		http_helper.ResponseError(w, http.StatusInternalServerError, "Internal server error", err.Error())
 		return
 	}
-	location := &purchase_entity.Location{
+	userLocation := &purchase_entity.Location{
 		Lat:  lat,
 		Long: long,
+	}
+
+	err = validator_helper.ValidatePayload(userLocation)
+	if err != nil {
+		http_helper.ResponseError(w, http.StatusBadRequest, err.Error(), "Request doesn't pass validation")
+		return
 	}
 
 	query := r.URL.Query()
@@ -77,7 +74,7 @@ func (c *PurchaseController) handleGetMerchantsNearby(w http.ResponseWriter, r *
 		params.Offset, _ = strconv.Atoi(offset)
 	}
 
-	merchantsNearbyResponse, err := c.Service.GetMerchantsNearby(r.Context(), location, params)
+	merchantsNearbyResponse, err := c.Service.GetMerchantsNearby(r.Context(), userLocation, params)
 	if err != nil {
 		http_helper.ResponseError(w, http.StatusInternalServerError, "Internal server error", err.Error())
 		return

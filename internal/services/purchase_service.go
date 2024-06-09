@@ -4,7 +4,6 @@ import (
 	"context"
 
 	item_entity "github.com/danzBraham/beli-mang/internal/entities/item"
-	merchant_entity "github.com/danzBraham/beli-mang/internal/entities/merchant"
 	purchase_entity "github.com/danzBraham/beli-mang/internal/entities/purchase"
 	item_exception "github.com/danzBraham/beli-mang/internal/exceptions/item"
 	merchant_exception "github.com/danzBraham/beli-mang/internal/exceptions/merchant"
@@ -39,13 +38,13 @@ func NewPurchaseService(
 }
 
 func (s *PurchaseServiceImpl) GetMerchantsNearby(ctx context.Context, location *purchase_entity.Location, params *purchase_entity.MerchantNearbyQueryParams) (*purchase_entity.GetMerchantsNearbyResponse, error) {
-	merchants, err := s.PurchaseRepository.GetMerchantsNearby(ctx, location, params)
+	merchantsNearby, err := s.PurchaseRepository.GetMerchantsNearby(ctx, location, params)
 	if err != nil {
 		return nil, err
 	}
 
 	getMerchants := []*purchase_entity.GetMerchantsNearby{}
-	for _, merchant := range merchants {
+	for _, merchant := range merchantsNearby {
 		items, err := s.ItemRepository.GetItemsByMerchantId(ctx, merchant.Id)
 		if err != nil {
 			return nil, err
@@ -64,18 +63,8 @@ func (s *PurchaseServiceImpl) GetMerchantsNearby(ctx context.Context, location *
 		}
 
 		getMerchants = append(getMerchants, &purchase_entity.GetMerchantsNearby{
-			Merchant: &merchant_entity.GetMerchant{
-				Id:       merchant.Id,
-				Name:     merchant.Name,
-				Category: merchant.Category,
-				ImageURL: merchant.ImageURL,
-				Location: merchant_entity.Location{
-					Lat:  merchant.Location.Lat,
-					Long: merchant.Location.Long,
-				},
-				CreatedAt: merchant.CreatedAt,
-			},
-			Items: getItems,
+			Merchant: merchant,
+			Items:    getItems,
 		})
 	}
 

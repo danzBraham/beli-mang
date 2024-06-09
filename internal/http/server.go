@@ -69,7 +69,10 @@ func (s *APIServer) Launch() error {
 		r.Mount("/merchants/{merchantId}/items", itemController.Routes())
 	})
 
-	r.Mount("/merchants", purchaseController.MerchantRoutes())
+	r.Group(func(r chi.Router) {
+		r.Use(middlewares.Authenticate)
+		r.Get("/merchants/nearby/{lat},{long}", purchaseController.HandleGetMerchantsNearby)
+	})
 
 	r.Route("/users", func(r chi.Router) {
 		r.Mount("/", userController.Routes())

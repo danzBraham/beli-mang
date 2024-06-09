@@ -30,8 +30,8 @@ type GetMerchantsNearbyResponse struct {
 }
 
 type Location struct {
-	Lat  float64 `json:"lat" validate:"required"`
-	Long float64 `json:"long" validate:"required"`
+	Lat  float64 `json:"lat" validate:"required,latitude"`
+	Long float64 `json:"long" validate:"required,longitude"`
 }
 
 type Item struct {
