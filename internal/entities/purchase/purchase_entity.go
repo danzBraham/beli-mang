@@ -29,6 +29,7 @@ type GetMerchantsNearbyResponse struct {
 	Meta *Meta                 `json:"meta"`
 }
 
+// FIX K6 Post User Estimate isStartingPoint
 type Location struct {
 	Lat  float64 `json:"lat" validate:"required,latitude"`
 	Long float64 `json:"long" validate:"required,longitude"`
@@ -41,13 +42,13 @@ type Item struct {
 
 type Order struct {
 	MerchantId      string `json:"merchantId" validate:"required"`
-	IsStartingPoint bool   `json:"isStartingPoint" validate:"required"`
-	Items           []Item `json:"items"`
+	IsStartingPoint bool   `json:"isStartingPoint"`
+	Items           []Item `json:"items" validate:"required,dive"`
 }
 
 type UserEstimateRequest struct {
-	UserLocation Location `json:"userLocation"`
-	Orders       []Order  `json:"orders" validate:"onestartingpoint"`
+	UserLocation Location `json:"userLocation" validate:"required"`
+	Orders       []Order  `json:"orders" validate:"required,onestartingpoint,dive"`
 }
 
 type UserEstimateResponse struct {

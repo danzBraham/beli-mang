@@ -32,140 +32,28 @@ func NewPurchaseRepository(db *pgxpool.Pool) PurchaseRepository {
 	return &PurchaseRepositoryImpl{DB: db}
 }
 
-// func (r *PurchaseRepositoryImpl) GetMerchantsNearby(ctx context.Context, location *purchase_entity.Location, params *purchase_entity.MerchantNearbyQueryParams) ([]*purchase_entity.GetMerchantsNearby, error) {
-// 	query := `
-// 		WITH limited_merchants AS (
-// 			SELECT
-// 				id, name, category, image_url,
-// 				ST_Y(location::geometry) AS latitude, ST_X(location::geometry) AS longitude, created_at
-// 			FROM merchants
-// 			ORDER BY location <-> ST_SetSRID(ST_MakePoint($1, $2), 4326)
-// 			LIMIT $3 OFFSET $4
-// 		)
-// 		SELECT
-// 			lm.id, lm.name, lm.category, lm.image_url, lm.latitude, lm.longitude, lm.created_at,
-// 			i.id, i.name, i.category, i.price, i.image_url, i.created_at
-// 		FROM limited_merchants lm
-// 		LEFT JOIN items i ON i.merchant_id = lm.id
-// 		WHERE 1 = 1
-// 	`
-// 	args := []interface{}{location.Long, location.Lat, params.Limit, params.Offset}
-// 	argId := 5
-
-// 	if params.Id != "" {
-// 		query += ` AND lm.id = $` + strconv.Itoa(argId)
-// 		args = append(args, params.Id)
-// 		argId++
-// 	}
-
-// 	if params.Name != "" {
-// 		query += ` AND (lm.name ILIKE $` + strconv.Itoa(argId) + ` OR i.name ILIKE $` + strconv.Itoa(argId) + `)`
-// 		args = append(args, "%"+params.Name+"%")
-// 		argId++
-// 	}
-
-// 	validCategories := map[string]bool{
-// 		merchant_entity.SmallRestaurant:       true,
-// 		merchant_entity.MediumRestaurant:      true,
-// 		merchant_entity.LargeRestaurant:       true,
-// 		merchant_entity.MerchandiseRestaurant: true,
-// 		merchant_entity.BoothKiosk:            true,
-// 		merchant_entity.ConvenienceStore:      true,
-// 	}
-
-// 	if params.Category != "" {
-// 		if !validCategories[params.Category] {
-// 			return []*purchase_entity.GetMerchantsNearby{}, nil
-// 		}
-// 		query += ` AND lm.category = $` + strconv.Itoa(argId)
-// 		args = append(args, params.Category)
-// 		argId++
-// 	}
-
-// 	rows, err := r.DB.Query(ctx, query, args...)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer rows.Close()
-
-// 	merchantsNearbyMap := make(map[string]*purchase_entity.GetMerchantsNearby)
-// 	for rows.Next() {
-// 		var (
-// 			merchantId, merchantName, merchantCategory, merchantImageUrl string
-// 			merchantLat, merchantLong                                    float64
-// 			merchantCreatedAt, itemCreatedAt                             time.Time
-// 			itemId, itemName, itemCategory, itemImageUrl                 string
-// 			itemPrice                                                    int
-// 		)
-
-// 		err := rows.Scan(
-// 			&merchantId, &merchantName, &merchantCategory, &merchantImageUrl, &merchantLat, &merchantLong, &merchantCreatedAt,
-// 			&itemId, &itemName, &itemCategory, &itemPrice, &itemImageUrl, &itemCreatedAt,
-// 		)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-
-// 		if _, exists := merchantsNearbyMap[merchantId]; !exists {
-// 			merchantsNearbyMap[merchantId] = &purchase_entity.GetMerchantsNearby{
-// 				Merchant: merchant_entity.GetMerchant{
-// 					Id:       merchantId,
-// 					Name:     merchantName,
-// 					Category: merchantCategory,
-// 					ImageURL: merchantImageUrl,
-// 					Location: merchant_entity.Location{
-// 						Lat:  merchantLat,
-// 						Long: merchantLong,
-// 					},
-// 					CreatedAt: merchantCreatedAt.Format(time.RFC3339),
-// 				},
-// 				Items: []item_entity.GetItem{},
-// 			}
-// 		}
-
-// 		merchant := merchantsNearbyMap[merchantId]
-// 		merchant.Items = append(merchant.Items, item_entity.GetItem{
-// 			Id:        itemId,
-// 			Name:      itemName,
-// 			Category:  itemCategory,
-// 			Price:     itemPrice,
-// 			ImageURL:  itemImageUrl,
-// 			CreatedAt: itemCreatedAt.Format(time.RFC3339),
-// 		})
-// 	}
-
-// 	if err := rows.Err(); err != nil {
-// 		log.Println("halo")
-// 		return nil, err
-// 	}
-
-// 	merchantsNearby := make([]*purchase_entity.GetMerchantsNearby, 0, len(merchantsNearbyMap))
-// 	for _, merchant := range merchantsNearbyMap {
-// 		merchantsNearby = append(merchantsNearby, merchant)
-// 	}
-
-// 	return merchantsNearby, nil
-// }
-
 func (r *PurchaseRepositoryImpl) GetMerchantsNearby(ctx context.Context, location *purchase_entity.Location, params *purchase_entity.MerchantNearbyQueryParams) ([]*merchant_entity.GetMerchant, error) {
 	query := `
-		SELECT
-			id, name, category, image_url,
-			ST_Y(location::geometry) AS latitude, ST_X(location::geometry) AS longitude, created_at
-		FROM merchants
+		WITH user_location AS (
+			SELECT ST_SetSRID(ST_MakePoint($1, $2), 4326) AS location
+		)
+		SELECT 
+			m.id, m.name, m.category, m.image_url,
+			ST_Y(m.location::geometry) AS latitude, ST_X(m.location::geometry) AS longitude, m.created_at
+		FROM merchants m, user_location ul
 		WHERE 1 = 1
 	`
-	args := []interface{}{}
-	argId := 1
+	args := []interface{}{location.Long, location.Lat}
+	argId := len(args) + 1
 
 	if params.Id != "" {
-		query += ` AND id = $` + strconv.Itoa(argId)
+		query += ` AND m.id = $` + strconv.Itoa(argId)
 		args = append(args, params.Id)
 		argId++
 	}
 
 	if params.Name != "" {
-		query += ` AND name ILIKE $` + strconv.Itoa(argId)
+		query += ` AND m.name ILIKE $` + strconv.Itoa(argId)
 		args = append(args, "%"+params.Name+"%")
 		argId++
 	}
@@ -183,15 +71,14 @@ func (r *PurchaseRepositoryImpl) GetMerchantsNearby(ctx context.Context, locatio
 		if !validCategories[params.Category] {
 			return []*merchant_entity.GetMerchant{}, nil
 		}
-		query += ` AND category = $` + strconv.Itoa(argId)
+		query += ` AND m.category = $` + strconv.Itoa(argId)
 		args = append(args, params.Category)
 		argId++
 	}
 
-	query += ` ORDER BY location <-> ST_SetSRID(ST_MakePoint($` + strconv.Itoa(argId) + `, $` + strconv.Itoa(argId+1) + `), 4326)`
-	args = append(args, params.Limit, params.Offset)
+	query += ` ORDER BY m.location <-> ul.location`
 
-	query += ` LIMIT $` + strconv.Itoa(argId+2) + ` OFFSET $` + strconv.Itoa(argId+3)
+	query += ` LIMIT $` + strconv.Itoa(argId) + ` OFFSET $` + strconv.Itoa(argId+1)
 	args = append(args, params.Limit, params.Offset)
 
 	rows, err := r.DB.Query(ctx, query, args...)
