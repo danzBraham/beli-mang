@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"strconv"
 	"time"
 
@@ -147,7 +146,7 @@ func (r *PurchaseRepositoryImpl) CreateEstimateOrder(ctx context.Context, estima
 		if err != nil {
 			return nil, err
 		}
-		points = append(points, purchase_entity.Location{Long: merchantLong, Lat: merchantLat})
+		points = append(points, purchase_entity.Location{Lat: merchantLat, Long: merchantLong})
 	}
 
 	// Check if any point exceeds the MaxDistance using smallest enclosing circle
@@ -242,14 +241,13 @@ func (r *PurchaseRepositoryImpl) CreateEstimateOrder(ctx context.Context, estima
 			return nil, err
 		}
 
-		distance := formula_helper.Haversine(estimateOrder.UserLocation.Lat, merchantLat, estimateOrder.UserLocation.Long, merchantLong)
+		distance := formula_helper.Distance(estimateOrder.UserLocation, purchase_entity.Location{Lat: merchantLat, Long: merchantLong})
 		if distance > maxDistance {
 			maxDistance = distance
 		}
 	}
 
-	averageSpeed := 40.0
-	estimatedDeliveryTime := int(math.Round((maxDistance / averageSpeed) * 60)) // Time in minutes, rounded to nearest integer
+	estimatedDeliveryTime := formula_helper.CalculateDeliveryTime(maxDistance)
 
 	// Update the order with estimated delivery time
 	updateEstimatedDeliveryTime := `

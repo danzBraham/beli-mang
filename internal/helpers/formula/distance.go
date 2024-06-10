@@ -14,14 +14,24 @@ type Circle struct {
 	Radius float64
 }
 
-// distance returns the Euclidean distance between two points
-func distance(p1, p2 purchase_entity.Location) float64 {
-	return math.Sqrt(math.Pow(p1.Lat-p2.Lat, 2) + math.Pow(p1.Long-p2.Long, 2))
+// distance returns the Haversine distance between two points
+func Distance(p1, p2 purchase_entity.Location) float64 {
+	const R = 6371 // Earth radius in kilometers
+	lat1, lon1 := p1.Lat*math.Pi/180, p1.Long*math.Pi/180
+	lat2, lon2 := p2.Lat*math.Pi/180, p2.Long*math.Pi/180
+	dlat, dlon := lat2-lat1, lon2-lon1
+
+	a := math.Sin(dlat/2)*math.Sin(dlat/2) +
+		math.Cos(lat1)*math.Cos(lat2)*
+			math.Sin(dlon/2)*math.Sin(dlon/2)
+	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+
+	return R * c
 }
 
 // isInCircle checks if a point is inside a given circle
 func isInCircle(p purchase_entity.Location, c Circle) bool {
-	return distance(p, c.Center) <= c.Radius
+	return Distance(p, c.Center) <= c.Radius
 }
 
 // circleFromTwoPoints returns a circle that passes through two points
@@ -30,7 +40,7 @@ func circleFromTwoPoints(p1, p2 purchase_entity.Location) Circle {
 		Lat:  (p1.Lat + p2.Lat) / 2,
 		Long: (p1.Long + p2.Long) / 2,
 	}
-	radius := distance(p1, p2) / 2
+	radius := Distance(p1, p2) / 2
 	return Circle{Center: center, Radius: radius}
 }
 
@@ -48,7 +58,7 @@ func circleFromThreePoints(p1, p2, p3 purchase_entity.Location) Circle {
 	ux := ((ax*ax+ay*ay)*(by-cy) + (bx*bx+by*by)*(cy-ay) + (cx*cx+cy*cy)*(ay-by)) / d
 	uy := ((ax*ax+ay*ay)*(cx-bx) + (bx*bx+by*by)*(ax-cx) + (cx*cx+cy*cy)*(bx-ax)) / d
 	center := purchase_entity.Location{Lat: ux, Long: uy}
-	radius := distance(center, p1)
+	radius := Distance(center, p1)
 	return Circle{Center: center, Radius: radius}
 }
 
@@ -89,10 +99,10 @@ func trivialCircle(points []purchase_entity.Location) Circle {
 
 // SmallestEnclosingCircle returns the smallest enclosing circle for a set of points
 func SmallestEnclosingCircle(points []purchase_entity.Location) Circle {
-	rand.NewSource(time.Now().UnixNano())
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	shuffled := make([]purchase_entity.Location, len(points))
 	copy(shuffled, points)
-	rand.Shuffle(len(shuffled), func(i, j int) {
+	rng.Shuffle(len(shuffled), func(i, j int) {
 		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
 	})
 	return welzl(shuffled, nil, len(shuffled))
